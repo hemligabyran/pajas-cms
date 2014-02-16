@@ -20,13 +20,15 @@ class Model_Cmssnippet extends Model
 			if ( ! $this->pdo->query($sql)->fetchColumn())
 			{
 				// Table cms_images does not exist, create it dawg!
-				$sql = 'CREATE TABLE `cms_snippets` (
-						`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY ,
-						`name` VARCHAR(255) NOT NULL,
-						`group` VARCHAR(255) NOT NULL,
-						`locale` CHAR(5) NOT NULL,
-						`content` TEXT NOT NULL
-					) ENGINE = INNODB CHARACTER SET utf8 COLLATE utf8_unicode_ci;';
+				$sql = 'CREATE TABLE IF NOT EXISTS cms_snippets (
+						id int(10) unsigned NOT NULL AUTO_INCREMENT,
+						`name` varchar(255) NOT NULL,
+						`group` varchar(255) NOT NULL,
+						locale char(5) NOT NULL,
+						content text NOT NULL,
+						PRIMARY KEY (id),
+						UNIQUE KEY name_group_locale_idx (`name`,`group`,locale)
+					) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;';
 				$this->pdo->exec($sql);
 			}
 		}
@@ -41,8 +43,10 @@ class Model_Cmssnippet extends Model
 
 	public static function factory_by_name($name, $locale = FALSE)
 	{
+		if ( ! $locale) $locale = Kohana::$config->load('cms.locale');
+
 		$pdo = Pajas_Pdo::instance();
-		$sql = 'SELECT id FROM cms_snippets WHERE filename = '.$pdo->quote($url);
+		$sql = 'SELECT id FROM cms_snippets WHERE name = '.$pdo->quote($url).' AND locale = '.$pdo->quote($locale);
 
 		foreach ($pdo->query($sql) as $row)
 			return new self($row['id']);
@@ -78,12 +82,26 @@ class Model_Cmssnippet extends Model
 			$sql = 'UPDATE cms_snippets SET ';
 			foreach ($this->data as $key => $value)
 				if ($key != 'id')
-					Mysql::quote_identifier($key).' = '.$this->pdo->quote($value).',';
+					$sql .= Mysql::quote_identifier($key).' = '.$this->pdo->quote($value).',';
 
-			$sql = rtrim(',', $sql);
-			$sql .= 'WHERE id = '.$this->pdo->quote($this->data['id']);
+			$sql = rtrim($sql, ',');
+			$sql .= ' WHERE id = '.$this->pdo->quote($this->data['id']);
 			$this->pdo->exec($sql);
 			$this->load($this->data['id']);
+		}
+		elseif (is_array($this->data) && ! isset($this->data['id']))
+		{
+			$sql = 'INSERT INTO cms_snippets (';
+			foreach ($this->data as $field => $value)
+				$sql .= Mysql::quote_identifier($field).',';
+			$sql = rtrim($sql, ',').') VALUES(';
+
+			foreach ($this->data as $field => $value)
+				$sql .= $this->pdo->quote($value).',';
+			$sql = rtrim($sql, ',').');';
+			$this->pdo->exec($sql);
+
+			$this->load($this->pdo->lastInsertId());
 		}
 
 		return $this;
