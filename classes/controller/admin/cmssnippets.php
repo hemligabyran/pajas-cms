@@ -12,7 +12,6 @@ class Controller_Admin_Cmssnippets extends Admincontroller
 	public function action_index()
 	{
 		$cmssnippets = Cmssnippets::factory();
-
 		xml::to_XML($cmssnippets->get(), array('cmssnippets' => $this->xml_content), 'cmssnippet', 'id');
 	}
 

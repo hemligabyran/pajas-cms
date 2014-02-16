@@ -46,7 +46,7 @@ class Model_Cmssnippet extends Model
 		if ( ! $locale) $locale = Kohana::$config->load('cms.locale');
 
 		$pdo = Pajas_Pdo::instance();
-		$sql = 'SELECT id FROM cms_snippets WHERE name = '.$pdo->quote($url).' AND locale = '.$pdo->quote($locale);
+		$sql = 'SELECT id FROM cms_snippets WHERE name = '.$pdo->quote($name).' AND locale = '.$pdo->quote($locale);
 
 		foreach ($pdo->query($sql) as $row)
 			return new self($row['id']);
